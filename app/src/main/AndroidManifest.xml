@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.jayis4176.mobile_client_v1" >
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme" >
+        <activity
+            android:name=".AutoLoginActivity"
+            android:label="@string/app_name" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".UtilityActivity"
+            android:label="@string/title_activity_utility" >
+        </activity>
+        <activity
+            android:name=".LastLoginActivity"
+            android:label="@string/title_activity_last_login" >
+        </activity>
+        <activity
+            android:name=".MainPageActivity"
+            android:label="@string/title_activity_main_page" >
+        </activity>
+        <activity
+            android:name=".SongListActivity"
+            android:label="@string/title_activity_song_list" >
+        </activity>
+    </application>
+
+</manifest>
