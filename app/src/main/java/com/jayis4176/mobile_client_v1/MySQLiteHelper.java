@@ -2,6 +2,7 @@ package com.jayis4176.mobile_client_v1;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
@@ -110,4 +111,23 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
         return count;
     }
 
+    public String showSongAllInfo (Cursor cursor) {
+        String SongInfo =
+                "Album: " + cursor.getString(cursor.getColumnIndex(COLUMN_ALBUM)) + "\n" +
+                        "Genre: " + cursor.getString(cursor.getColumnIndex(COLUMN_GENRE)) + "\n" +
+                        "Artist: " + cursor.getString(cursor.getColumnIndex(COLUMN_ARTIST)) + "\n" +
+                        "FileName: " + cursor.getString(cursor.getColumnIndex(COLUMN_FILENAME));
+
+        return SongInfo;
+    }
+
+    public String emptyStringChecker (String in) {
+        if (in.compareTo("") == 0) {
+            return "You Never Told Me...";
+        }
+        else {
+            return in;
+        }
+
+    }
 }

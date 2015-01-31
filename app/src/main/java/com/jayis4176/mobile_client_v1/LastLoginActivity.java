@@ -58,6 +58,7 @@ public class LastLoginActivity extends ActionBarActivity {
     private TextView textView_areYou;
     private Button button_resumeLogin;
     private boolean record_or_not;
+    private String dumpMessage;
 
     // URLs
     private String url_list_json = AutoLoginActivity.url_list_json;
@@ -81,6 +82,7 @@ public class LastLoginActivity extends ActionBarActivity {
         textView_notSuccess = (TextView) findViewById(R.id.not_success);
         textView_areYou = (TextView) findViewById(R.id.are_you);
         button_resumeLogin = (Button) findViewById(R.id.resume_login);
+        dumpMessage = getIntent().getStringExtra(AutoLoginActivity.EXTRA_DUMP);
 
         // main
         if ( seekLastUser() ) {
@@ -144,9 +146,12 @@ public class LastLoginActivity extends ActionBarActivity {
                 cursor_lastUser.moveToFirst();
 
                 lastPassword = cursor_lastUser.getString(cursor_lastUser.getColumnIndex(MySQLiteHelper.COLUMN_PASSWORD));
+                dumpMessage += ("findolduser" + lastUser + "\nwith password: " + lastPassword);
                 return true;
             }
         }
+
+        dumpMessage += ("not finding old users\n");
 
         return false;
     }
@@ -232,9 +237,6 @@ public class LastLoginActivity extends ActionBarActivity {
             }
             catch (Exception e) {
                 e.printStackTrace();
-            }
-            finally {
-                client.getConnectionManager().shutdown();
             }
 
             return null;

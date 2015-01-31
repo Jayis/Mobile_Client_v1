@@ -1,6 +1,7 @@
 package com.jayis4176.mobile_client_v1;
 
 import android.app.Activity;
+import android.app.DownloadManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -32,6 +33,7 @@ public class AutoLoginActivity extends ActionBarActivity {
     private static SQLiteDatabase database;
     private static MySQLiteHelper dbHelper;
     private static SharedPreferences sharedPref;
+    private static DownloadManager dm;
 
     //
     private JSONObject jsonObject;
@@ -39,10 +41,14 @@ public class AutoLoginActivity extends ActionBarActivity {
     private Activity this_act = this;
     private String lastUser = "";
     private Cursor cursor_lastUser = null;
+    private String dumpMessage = "";
 
     // URLs
     public static String url_site = "http://106.187.36.145:3000";
     public static String url_list_json = url_site + "/list.json";
+
+    //
+    public final static String EXTRA_DUMP = "com.jayis4176.my_first_app.dump_auto";
 
 
     @Override
@@ -50,11 +56,23 @@ public class AutoLoginActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
 
         isThereNetwork = isConnected();
+        dumpMessage += (isThereNetwork + "\n");
         dbHelper = new MySQLiteHelper(this);
         sharedPref = this.getPreferences(Context.MODE_PRIVATE);
+        database = dbHelper.getWritableDatabase();
 
         if ( isThereNetwork ) new BG_IfLogin().execute();
-        else tools.showString("No Network!!", this_act);
+        else {
+            //tools.showString("No Network!!", this_act);
+            if (sharedPref.getString("last_user", null) == null) {
+                tools.showString("No Network!!, And no Last Login", this_act);
+            }
+            else {
+                tools.showString("No Network!!", this_act);
+
+                goto_MainPage();
+            }
+        }
     }
 
     @Override
@@ -81,6 +99,17 @@ public class AutoLoginActivity extends ActionBarActivity {
 
     public void goto_LastLogin(){
         Intent intent = new Intent(this, LastLoginActivity.class);
+
+        intent.putExtra(EXTRA_DUMP, dumpMessage);
+
+        startActivity(intent);
+    }
+
+    public void goto_MainPage(){
+        Intent intent = new Intent(this, MainPageActivity.class);
+
+        intent.putExtra(EXTRA_DUMP, dumpMessage);
+
         startActivity(intent);
     }
 
@@ -92,7 +121,6 @@ public class AutoLoginActivity extends ActionBarActivity {
 
         @Override
         protected Integer doInBackground (String... params) {
-            database = dbHelper.getWritableDatabase();
             try {
                 HttpGet request_IfLogin = new HttpGet(url_list_json);
                 response = client.execute(request_IfLogin);
@@ -114,18 +142,25 @@ public class AutoLoginActivity extends ActionBarActivity {
             try {
                 jsonObject = new JSONObject(tmp_response);
                 if ( jsonObject.getInt("login")==1 ) {
+                    dumpMessage += "alreadyLogin\n";
                     lastUser = sharedPref.getString("last_user", null);
+                    dumpMessage += (lastUser + "\n");
                     cursor_lastUser = database.rawQuery("SELECT * FROM " + MySQLiteHelper.TABLE_USERS + " WHERE " + MySQLiteHelper.COLUMN_USERNAME + " = '" + lastUser + "'", null);
                     cursor_lastUser.moveToFirst();
                     String tmp_json_str = cursor_lastUser.getString(cursor_lastUser.getColumnIndex(MySQLiteHelper.COLUMN_JSONSTR));
                     ContentValues values = new ContentValues();
                     if (tmp_json_str.compareTo(tmp_response) != 0) {
+                        dumpMessage += "need to refresh SongTable\n";
                         values.put(MySQLiteHelper.COLUMN_NEEDREFRESH, 1);
                         values.put(MySQLiteHelper.COLUMN_JSONSTR, tmp_response);
                         dbHelper.updateUserTableByUsername(database, lastUser, values);
                     }
+                    goto_MainPage();
                 }
-                else goto_LastLogin();
+                else {
+                    dumpMessage += "not login, so go to LastLogin";
+                    goto_LastLogin();
+                }
             }
             catch (Exception e) {
                 e.printStackTrace();
@@ -149,5 +184,8 @@ public class AutoLoginActivity extends ActionBarActivity {
     }
     public static SharedPreferences shareSharePref () {
         return sharedPref;
+    }
+    public static DownloadManager shareDM () {
+        return dm;
     }
 }

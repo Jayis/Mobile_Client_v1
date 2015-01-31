@@ -1,5 +1,6 @@
 package com.jayis4176.mobile_client_v1;
 
+import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -33,8 +34,10 @@ public class MainPageActivity extends ActionBarActivity {
     private Cursor cursor_lastUser;
     private JSONObject jsonObject;
     private JSONArray jsonArray;
-    String private_SongList;
+    private String private_SongList;
     private Button button_SongList;
+    private Activity this_act = this;
+    private String dumpMessage = "";
 
     //
     public final static String EXTRA_SONGTABLENAME = "com.jayis4176.my_first_app.songTableName";
@@ -53,6 +56,8 @@ public class MainPageActivity extends ActionBarActivity {
         // initialization
         lastUser = sharedPref.getString("last_user", null);
         button_SongList = (Button) findViewById(R.id.seeSongList);
+
+        dumpMessage += ("lastUser: " + lastUser + "\n");
 
         //
         button_SongList.setEnabled(false);
@@ -94,33 +99,48 @@ public class MainPageActivity extends ActionBarActivity {
 
     private class BG_CheckSongList extends AsyncTask<String, Integer, Integer>
     {
+        int needRefresh;
+
         @Override
         protected Integer doInBackground (String... params) {
             cursor_lastUser = database.rawQuery("SELECT * FROM " + MySQLiteHelper.TABLE_USERS + " WHERE " + MySQLiteHelper.COLUMN_USERNAME + " = '" + lastUser + "'", null);
             cursor_lastUser.moveToFirst();
-            if (cursor_lastUser.getInt(cursor_lastUser.getColumnIndex(MySQLiteHelper.COLUMN_NEEDREFRESH)) == 1)  {
+            dumpMessage += ("cursorLastUser: " + cursor_lastUser.getCount() + "\n");
+            needRefresh = cursor_lastUser.getInt(cursor_lastUser.getColumnIndex(MySQLiteHelper.COLUMN_NEEDREFRESH));
+            if (needRefresh == 1)  {
+                dumpMessage += ("needRefresh: " + needRefresh + "\n");
                 // need to refresh
                 ContentValues values = new ContentValues();
-                if (cursor_lastUser.getString(cursor_lastUser.getColumnIndex(MySQLiteHelper.COLUMN_SONGLISTTABLE)) == "null") {
+                if (cursor_lastUser.getString(cursor_lastUser.getColumnIndex(MySQLiteHelper.COLUMN_SONGLISTTABLE)).compareTo("null") == 0) {
                     // also need to create table
                     private_SongList = lastUser + "_SongList";
                     dbHelper.createPrivateTable(database, private_SongList);
                     // update table name (SongList)
                     values.put(MySQLiteHelper.COLUMN_SONGLISTTABLE, private_SongList);
+                    dumpMessage += ("nullTable\n");
+                }
+                else {
+                    // use old table name
+                    private_SongList = cursor_lastUser.getString(cursor_lastUser.getColumnIndex(MySQLiteHelper.COLUMN_SONGLISTTABLE));
                 }
 
-                // start refreshing SongList
+                // parse in JSONObject
                 try {
                     jsonObject = new JSONObject(cursor_lastUser.getString(cursor_lastUser.getColumnIndex(MySQLiteHelper.COLUMN_JSONSTR)));
                     jsonArray = jsonObject.getJSONArray("file_list");
-                    refreshSongList();
                 }
                 catch (Exception e) {
                     e.printStackTrace();
                 }
+                // start refreshing SongList
+                refreshSongList();
 
                 values.put(MySQLiteHelper.COLUMN_NEEDREFRESH, 0);
                 dbHelper.updateUserTableByUsername(database, lastUser, values);
+            }
+            else {
+                dumpMessage += ("noneedRefresh\n");
+                private_SongList = cursor_lastUser.getString(cursor_lastUser.getColumnIndex(MySQLiteHelper.COLUMN_SONGLISTTABLE));
             }
 
             return null;
@@ -128,7 +148,11 @@ public class MainPageActivity extends ActionBarActivity {
 
         @Override
         protected void onPostExecute (Integer result) {
+            dumpMessage += ("privateSongList: " + private_SongList + "\n");
+
             button_SongList.setEnabled(true);
+
+            //tools.showString(dumpMessage, this_act);
 
         }
     }
@@ -138,48 +162,40 @@ public class MainPageActivity extends ActionBarActivity {
         JSONObject curSong;
         try {
             for (int i = 0; i < jsonArray.length(); i++) {
+                dumpMessage += ("privateSongList: " + private_SongList + "\n");
                 curSong = jsonArray.getJSONObject(i);
                 cursor_curSong = database.rawQuery("SELECT * FROM " + private_SongList + " WHERE " + MySQLiteHelper.COLUMN_SERVERID + " = " + curSong.getInt("server_id"), null);
                 cursor_curSong.moveToFirst();
                 ContentValues values = new ContentValues();
+                // -- attribute on json.list
+                values.put(MySQLiteHelper.COLUMN_ALBUM, dbHelper.emptyStringChecker(curSong.getString("album")));
+                values.put(MySQLiteHelper.COLUMN_GENRE, curSong.getString("genre"));
+                values.put(MySQLiteHelper.COLUMN_SERVERID, curSong.getInt("server_id"));
+                values.put(MySQLiteHelper.COLUMN_TITLE, dbHelper.emptyStringChecker(curSong.getString("title")));
+                values.put(MySQLiteHelper.COLUMN_URL, curSong.getString("url"));
+                values.put(MySQLiteHelper.COLUMN_ARTIST, dbHelper.emptyStringChecker(curSong.getString("artist")));
+                values.put(MySQLiteHelper.COLUMN_UPLOADDATE, curSong.getString("upload_date"));
+                values.put(MySQLiteHelper.COLUMN_FILENAME, curSong.getString("filename"));
+                // -- attribute add by myself
+                values.put(MySQLiteHelper.COLUMN_ONLIST, 1);            // to see if this song is still on the list this time
+                values.put(MySQLiteHelper.COLUMN_LOCALURI, "null");    // "null" means haven't download yet
+
                 if (cursor_curSong.getCount() <= 0) {
                     // not found on local SongList
-                    // -- attribute on json.list
-                    values.put(MySQLiteHelper.COLUMN_ALBUM, curSong.getString("album"));
-                    values.put(MySQLiteHelper.COLUMN_GENRE, curSong.getString("genre"));
-                    values.put(MySQLiteHelper.COLUMN_SERVERID, curSong.getInt("server_id"));
-                    values.put(MySQLiteHelper.COLUMN_TITLE, curSong.getString("title"));
-                    values.put(MySQLiteHelper.COLUMN_URL, curSong.getString("url"));
-                    values.put(MySQLiteHelper.COLUMN_ARTIST, curSong.getString("artist"));
-                    values.put(MySQLiteHelper.COLUMN_UPLOADDATE, curSong.getString("upload_date"));
-                    values.put(MySQLiteHelper.COLUMN_FILENAME, curSong.getString("filename"));
-                    // -- attribute add by myself
-                    values.put(MySQLiteHelper.COLUMN_ONLIST, 1);            // to see if this song is still on the list this time
-                    values.put(MySQLiteHelper.COLUMN_LOCALURI, "null");    // "null" means haven't download yet
-
                     database.insert(
                             private_SongList,
                             null,
                             values);
                 }
-                else if (curSong.getString("upload_date").compareTo(cursor_curSong.getString(cursor_lastUser.getColumnIndex(MySQLiteHelper.COLUMN_UPLOADDATE))) != 0) {
+                else {
+                //else if (curSong.getString("upload_date").compareTo(cursor_curSong.getString(cursor_lastUser.getColumnIndex(MySQLiteHelper.COLUMN_UPLOADDATE))) != 0) {
                     // the song is not the same
-                    // -- attribute on json.list
-                    values.put(MySQLiteHelper.COLUMN_ALBUM, curSong.getString("album"));
-                    values.put(MySQLiteHelper.COLUMN_GENRE, curSong.getString("genre"));
-                    values.put(MySQLiteHelper.COLUMN_TITLE, curSong.getString("title"));
-                    values.put(MySQLiteHelper.COLUMN_URL, curSong.getString("url"));
-                    values.put(MySQLiteHelper.COLUMN_ARTIST, curSong.getString("artist"));
-                    values.put(MySQLiteHelper.COLUMN_UPLOADDATE, curSong.getString("upload_date"));
-                    values.put(MySQLiteHelper.COLUMN_FILENAME, curSong.getString("filename"));
-                    // -- attribute add by myself
-                    values.put(MySQLiteHelper.COLUMN_ONLIST, 1);            // to see if this song is still on the list this time
-                    values.put(MySQLiteHelper.COLUMN_LOCALURI, "null");    // "null" means haven't download yet
                     // update
                     dbHelper.updateSongTableByServerID(database, private_SongList, curSong.getInt("server_id"), values);
                     // ---------FUTURE WORK----------
                     // delete the old file, if old localURI is not null
                 }
+                /**/
             }
             // delete those are not on the list
             String selection = MySQLiteHelper.COLUMN_ONLIST + " LIKE ?";
