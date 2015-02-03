@@ -90,7 +90,7 @@ public class LastLoginActivity extends ActionBarActivity {
             textView_areYou.setText(Notify);
         }
         else {
-            Notify = "Please Login~\nThere is no Last User";
+            Notify = "Please Login~\n";
             textView_areYou.setText(Notify);
             button_resumeLogin.setEnabled(false);
         }

@@ -65,7 +65,7 @@ public class AutoLoginActivity extends ActionBarActivity {
         else {
             //tools.showString("No Network!!", this_act);
             if (sharedPref.getString("last_user", null) == null) {
-                tools.showString("No Network!!, And no Last Login", this_act);
+                tools.showString("No Network!!", this_act);
             }
             else {
                 tools.showString("No Network!!", this_act);

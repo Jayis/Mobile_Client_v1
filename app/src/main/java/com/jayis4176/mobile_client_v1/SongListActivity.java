@@ -2,19 +2,24 @@ package com.jayis4176.mobile_client_v1;
 
 import android.app.Activity;
 import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Environment;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.Toast;
@@ -42,6 +47,7 @@ public class SongListActivity extends ActionBarActivity {
     private Utility tools = new Utility();
     private Activity this_act = this;
     private DownloadManager dm;
+    private List<Map<String, Object>> QedSongList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,8 +63,12 @@ public class SongListActivity extends ActionBarActivity {
         sharedPref = AutoLoginActivity.shareSharePref();
         dm = AutoLoginActivity.shareDM();
         //
+        QedSongList = new ArrayList<Map<String, Object>>();
         SongTableName = intent.getStringExtra(MainPageActivity.EXTRA_SONGTABLENAME);
         listView_SongList = (ListView) findViewById(R.id.SongList);
+
+        this.registerReceiver(onComplete,
+                new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
 
         //showAllSong();
 
@@ -130,7 +140,7 @@ public class SongListActivity extends ActionBarActivity {
         tools.showString(allSong, this_act);
     }
 
-    public void DL_the_song (View view, int position) {
+    public void DL_the_song (Button this_butt, int position) {
         DownloadURL = "http://106.187.36.145:3000" + cur_SongList.get(position).get("DownLoadURI");
 
         dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
@@ -138,13 +148,19 @@ public class SongListActivity extends ActionBarActivity {
         File destination = getApplicationContext().getExternalFilesDir(Environment.DIRECTORY_MUSIC);
         File file = new File(destination, (String) cur_SongList.get(position).get("FileName"));
         request.setDestinationUri(Uri.parse(file.toURI().toString()));
-        dm.enqueue(request);
+        long QedSong = dm.enqueue(request);
 
         ContentValues values = new ContentValues();
         values.put(MySQLiteHelper.COLUMN_LOCALURI, file.getAbsolutePath() + cur_SongList.get(position).get("FileName"));
         dbHelper.updateSongTableByServerID(database, SongTableName, (Integer) cur_SongList.get(position).get("ServerID"), values );
 
-        tools.showString(file.getAbsolutePath(), this_act);
+        //tools.showString(file.getAbsolutePath(), this_act);
+
+        Map<String, Object> item = new HashMap<String, Object>();
+        item.put("queryID", QedSong);
+        item.put("DL_butt", this_butt);
+
+        QedSongList.add(item);
     }
 
     @Override
@@ -168,4 +184,37 @@ public class SongListActivity extends ActionBarActivity {
 
         return super.onOptionsItemSelected(item);
     }
+
+    BroadcastReceiver onComplete=new BroadcastReceiver() {
+        public void onReceive(Context ctxt, Intent intent) {
+            // your code
+            //this_button.setText("in Local");
+            //tools.showString("complete", this_act);
+            long tmp_query;
+            Cursor tmp_cursor;
+            int tmp_status;
+            Button tmp_butt;
+
+            for (int i = 0; i < QedSongList.size(); i++ ) {
+                tmp_query = (long) QedSongList.get(i).get("queryID");
+                tmp_cursor = dm.query(new DownloadManager.Query().setFilterById(tmp_query));
+
+                if (tmp_cursor!=null) {
+                    tmp_cursor.moveToFirst();
+
+                    tmp_status = tmp_cursor.getInt(tmp_cursor.getColumnIndex(dm.COLUMN_STATUS));
+
+                    if (tmp_status == dm.STATUS_SUCCESSFUL) {
+                        //-----FUTURE WORK-----
+                        // this is also where we can set local URI
+                        tmp_butt = (Button) QedSongList.get(i).get("DL_butt");
+                        tmp_butt.setText("in LOCAL");
+
+                        QedSongList.remove(i);
+                        break;
+                    }
+                }
+            }
+        }
+    };
 }
