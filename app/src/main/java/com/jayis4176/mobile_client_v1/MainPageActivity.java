@@ -178,9 +178,9 @@ public class MainPageActivity extends ActionBarActivity {
                 values.put(MySQLiteHelper.COLUMN_FILENAME, curSong.getString("filename"));
                 // -- attribute add by myself
                 values.put(MySQLiteHelper.COLUMN_ONLIST, 1);            // to see if this song is still on the list this time
-                values.put(MySQLiteHelper.COLUMN_LOCALURI, "null");    // "null" means haven't download yet
 
                 if (cursor_curSong.getCount() <= 0) {
+                    values.put(MySQLiteHelper.COLUMN_LOCALURI, "null");    // "null" means haven't download yet
                     // not found on local SongList
                     database.insert(
                             private_SongList,
