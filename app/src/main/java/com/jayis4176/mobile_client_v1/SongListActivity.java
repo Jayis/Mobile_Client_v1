@@ -92,6 +92,12 @@ public class SongListActivity extends ActionBarActivity {
         );
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        this.unregisterReceiver(onComplete);
+    }
+
     private List<Map<String, Object>> generateList () {
         Cursor cursor = database.rawQuery("SELECT * FROM " + SongTableName, null);
         cursor.moveToFirst();

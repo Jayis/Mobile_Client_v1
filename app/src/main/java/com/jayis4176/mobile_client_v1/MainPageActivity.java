@@ -23,10 +23,10 @@ import org.json.JSONObject;
 public class MainPageActivity extends ActionBarActivity {
 
     // share static
-    private DefaultHttpClient client;
-    private SQLiteDatabase database;
-    private MySQLiteHelper dbHelper;
-    private SharedPreferences sharedPref;
+    private static DefaultHttpClient client;
+    private static SQLiteDatabase database;
+    private static MySQLiteHelper dbHelper;
+    private static SharedPreferences sharedPref;
 
     // private
     private Utility tools = new Utility();

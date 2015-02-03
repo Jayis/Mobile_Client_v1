@@ -21,10 +21,6 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".LastLoginActivity"
-            android:label="@string/title_activity_last_login" >
-        </activity>
-        <activity
             android:name=".MainPageActivity"
             android:label="@string/title_activity_main_page" >
         </activity>
